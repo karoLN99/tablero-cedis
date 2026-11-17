@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablero CEDIS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header class="barra">
+  <div class="marca">
+    <span class="logo" aria-hidden="true"></span>
+    <div>
+      <h1>Tablero CEDIS → tiendas</h1>
+      <p id="corte" class="sub">Cargando…</p>
+    </div>
+  </div>
+  <nav class="menu" aria-label="Menú principal">
+    <button data-vista="ttl" class="activo">TTL</button>
+    <div class="grupo">
+      <span class="grupo-titulo">Nivel de servicio</span>
+      <button data-vista="ns-general">General</button>
+      <button data-vista="ns-sub">Subcategorías</button>
+    </div>
+  </nav>
+</header>
+
+<section class="filtros" aria-label="Filtros">
+  <label>Mes <select id="f-mes"></select></label>
+  <label>Tienda <select id="f-tienda"><option value="">Todas</option></select></label>
+  <span class="espacio"></span>
+  <div id="descargas" class="descargas"></div>
+</section>
+
+<main>
+  <!-- ======================= TTL ======================= -->
+  <section id="v-ttl" class="vista">
+    <div class="kpis" id="ttl-kpis"></div>
+
+    <article class="tarjeta">
+      <h2>Distribución del TTL restante al entregar</h2>
+      <p class="nota" id="ttl-dist-nota"></p>
+      <div id="ttl-dist"></div>
+    </article>
+
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <h2>Pendientes con stock en CEDIS y menos tiempo de vida</h2>
+        <button class="btn-sec" id="ttl-pend-csv">Descargar lista (CSV)</button>
+      </div>
+      <p class="nota">Líneas pendientes aún dentro del TTL cuyo producto tiene hoy existencia en CEDIS ≥ cantidad requerida. Ordenadas de menor a mayor TTL restante: son las que hay que despachar primero.</p>
+      <div class="tabla-scroll alto"><table id="ttl-pend"></table></div>
+    </article>
+
+    <div class="dos-col">
+      <article class="tarjeta">
+        <h2>Por tienda</h2>
+        <div class="tabla-scroll"><table id="ttl-tiendas"></table></div>
+      </article>
+      <article class="tarjeta">
+        <h2 id="ttl-sub-titulo">Subcategorías</h2>
+        <div class="tabla-scroll alto"><table id="ttl-sub"></table></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ======================= NS GENERAL ======================= -->
+  <section id="v-ns-general" class="vista" hidden>
+    <div class="kpis" id="nsg-kpis"></div>
+    <article class="tarjeta">
+      <h2>Nivel de servicio por mes</h2>
+      <p class="nota">SKUs entregados en ≤ 96 h ÷ SKUs requeridos (sin contar pendientes que aún están dentro de las 96 h).</p>
+      <div id="nsg-meses"></div>
+    </article>
+    <article class="tarjeta">
+      <h2>Nivel de servicio por tienda</h2>
+      <div class="tabla-scroll"><table id="nsg-tiendas"></table></div>
+    </article>
+  </section>
+
+  <!-- ======================= NS SUBCATEGORÍAS ======================= -->
+  <section id="v-ns-sub" class="vista" hidden>
+    <div class="kpis" id="nss-kpis"></div>
+    <article class="tarjeta">
+      <h2>Resumen por tienda</h2>
+      <p class="nota">Subcategorías pedidas por cada tienda y cuántas se entregaron completas en ≤ 96 h.</p>
+      <div class="tabla-scroll"><table id="nss-tiendas"></table></div>
+    </article>
+    <div class="dos-col">
+      <article class="tarjeta">
+        <h2>Requerimientos que no cumplieron, por motivo y ABC</h2>
+        <div class="tabla-scroll"><table id="nss-motivo"></table></div>
+      </article>
+      <article class="tarjeta">
+        <h2>Por estatus</h2>
+        <div class="tabla-scroll"><table id="nss-estatus"></table></div>
+      </article>
+    </div>
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <h2>Subcategorías por tienda</h2>
+        <label class="inline">Motivo <select id="nss-f-motivo"></select></label>
+      </div>
+      <div class="tabla-scroll alto"><table id="nss-matriz"></table></div>
+    </article>
+  </section>
+</main>
+
+<footer class="pie">Datos: extracciones diarias del sistema · Se actualiza una vez al día.</footer>
+
+<div id="tooltip" role="tooltip" hidden></div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
