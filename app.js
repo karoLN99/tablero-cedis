@@ -354,6 +354,13 @@
     pintarDescargas();
     const params = new URLSearchParams({ v: estado.vista, mes: estado.mes, tienda: estado.tienda });
     history.replaceState(null, '', '#' + params);
+    document.querySelectorAll('.aviso-mes').forEach((x) => x.remove());
+    if (estado.mes && estado.mesesDetalle && !estado.mesesDetalle.has(estado.mes)) {
+      const txt = estado.vista === 'ns-sub'
+        ? `${nombreMes(estado.mes)} viene del histórico: se muestra el resumen por tienda; los motivos (Reporte NS) solo existen desde que se cargan los archivos diarios.`
+        : `No hay detalle por línea de ${nombreMes(estado.mes)}: este menú se llena con los archivos diarios. El histórico de meses anteriores está en Nivel de servicio → Subcategorías.`;
+      $('#v-' + estado.vista).insertAdjacentHTML('afterbegin', `<div class="aviso-mes">${txt}</div>`);
+    }
     try { await VISTAS[estado.vista](); }
     catch (e) { console.error(e); $('#v-' + estado.vista).insertAdjacentHTML('afterbegin', `<div class="error">No se pudieron leer los datos: ${esc(e.message)}</div>`); }
   }
@@ -366,17 +373,25 @@
     }
     const h = new URLSearchParams(location.hash.slice(1));
     try {
-      const [corte, meses, tiendas, reportes] = await Promise.all([
+      const [corte, meses, tiendas, reportes, resumenSub] = await Promise.all([
         api('v_corte'), api('v_meses'), api('tiendas', { order: 'tienda_id' }), api('reportes', { order: 'actualizado.desc' }),
+        api('v_ns_subcat_resumen', {}, true).catch(() => []),
       ]);
       estado.tiendas = tiendas; estado.reportes = reportes;
       const c = corte[0] || {};
       $('#corte').textContent = c.corte ? `Datos al corte del ${fecha(c.corte, true)} · actualizado ${fecha(c.cargado, true)}` : 'Aún no hay cargas';
-      $('#f-mes').innerHTML = meses.map((m) => `<option value="${m.mes}">${nombreMes(m.mes)} (${fecha(m.desde)}–${fecha(m.hasta)})</option>`).join('') + '<option value="">Todos los meses</option>';
+      // meses con detalle por línea + meses del histórico de subcategorías
+      const det = new Map(meses.map((m) => [m.mes, m]));
+      const todos = [...new Set([...det.keys(), ...resumenSub.map((f) => f.mes)])].sort().reverse();
+      estado.mesesDetalle = new Set(det.keys());
+      $('#f-mes').innerHTML = todos.map((m) => {
+        const d = det.get(m);
+        return `<option value="${m}">${nombreMes(m)}${d ? ` (${fecha(d.desde)}–${fecha(d.hasta)})` : ''}</option>`;
+      }).join('') + '<option value="">Todos los meses</option>';
       const ids = tiendas.filter((t) => t.incluir !== false).map((t) => t.tienda_id).sort((a, b) => +a - +b);
       $('#f-tienda').innerHTML = '<option value="">Todas</option>' + ids.map((id) => `<option value="${id}">${esc(nombreTienda(id))}</option>`).join('');
       estado.vista = VISTAS[h.get('v')] ? h.get('v') : 'ttl';
-      estado.mes = h.has('mes') ? h.get('mes') : (meses[0]?.mes || '');
+      estado.mes = h.has('mes') ? h.get('mes') : (meses[0]?.mes || todos[0] || '');
       estado.tienda = h.get('tienda') || '';
       $('#f-mes').value = estado.mes; $('#f-tienda').value = estado.tienda;
     } catch (e) {
