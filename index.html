@@ -8,14 +8,17 @@
 <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
-<header class="barra">
-  <div class="marca">
-    <span class="logo" aria-hidden="true"></span>
-    <div>
-      <h1>Tablero CEDIS → tiendas</h1>
-      <p id="corte" class="sub">Cargando…</p>
-    </div>
+<div class="cabecera">
+  <div class="logos">
+    <img src="logos/logo_cedis_oriente.png" alt="Centro de Distribución de Oriente" height="46">
+    <img src="logos/logo_tiendas_oriente.png" alt="Tiendas de Oriente" height="40">
   </div>
+  <div class="titulo">
+    <h1>Tablero CEDIS → tiendas</h1>
+    <p id="corte" class="sub">Cargando…</p>
+  </div>
+</div>
+<header class="barra">
   <nav class="menu" aria-label="Menú principal">
     <button data-vista="ttl" class="activo">TTL</button>
     <div class="grupo">
@@ -83,10 +86,21 @@
   <section id="v-ns-sub" class="vista" hidden>
     <div class="kpis" id="nss-kpis"></div>
     <article class="tarjeta">
-      <h2>Resumen por tienda</h2>
-      <p class="nota">Subcategorías pedidas por cada tienda y cuántas se entregaron completas en ≤ 96 h.</p>
-      <div class="tabla-scroll"><table id="nss-tiendas"></table></div>
+      <h2>Nivel de servicio por subcategoría · resumen por tienda</h2>
+      <p class="nota">Una subcategoría cumple cuando su tiempo promedio de despacho a la tienda es ≤ 96 h. Se muestran el mes elegido y los dos anteriores.</p>
+      <div class="tabla-scroll"><table id="nss-tiendas" class="meses3"></table></div>
     </article>
+    <div class="dos-col">
+      <article class="tarjeta">
+        <h2>Evolución mensual</h2>
+        <div id="nss-meses"></div>
+      </article>
+      <article class="tarjeta">
+        <h2 id="nss-nocumple-tit">Subcategorías que no cumplieron (promedio &gt; 96 h)</h2>
+        <div class="tabla-scroll alto"><table id="nss-nocumple"></table></div>
+      </article>
+    </div>
+    <h2 class="separador">Requerimientos que no cumplieron · Reporte NS por subcategoría</h2>
     <div class="dos-col">
       <article class="tarjeta">
         <h2>Requerimientos que no cumplieron, por motivo y ABC</h2>

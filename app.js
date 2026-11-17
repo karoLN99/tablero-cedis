@@ -42,7 +42,8 @@
   const clsPct = (v) => (v != null && v < ROJO ? 'rojo' : '');
   const fecha = (s, hora = false) => {
     if (!s) return '—';
-        const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) : new Date(s.replace(' ', 'T'));
+    // 'AAAA-MM-DD' sin hora: se lee como fecha local (si no, el navegador la toma en UTC y la corre un día)
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) : new Date(s.replace(' ', 'T'));
     const f = d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
     return hora ? f + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : f;
   };
@@ -150,7 +151,7 @@
       { t: 'Cant. requerida', k: (f) => n(f.cantidad), n: true },
       { t: 'Existencia CEDIS', k: (f) => n(f.ex_actual), n: true },
       { t: 'Creado', k: (f) => fecha(f.fecha_creacion, true) },
-            { t: 'Req.', html: true, k: (f) => `<span title="${esc(f.req_id)}">${esc(String(f.req_id ?? '').slice(0, 8))}…</span>` },
+      { t: 'Req.', html: true, k: (f) => `<span title="${esc(f.req_id)}">${esc(String(f.req_id ?? '').slice(0, 8))}…</span>` },
     ], pend.slice(0, 100));
 
     // por tienda
@@ -221,26 +222,69 @@
   const ABCS = ['9', 'A', 'B', 'C', 'D'];
 
   async function vistaNSSub() {
-    const [st, mot, mat] = await Promise.all([
-      api('v_ns_subcat_tienda', filtro(), true),
+    const [res, noc, mot, mat] = await Promise.all([
+      api('v_ns_subcat_resumen', {}, true),
+      api('v_ns_subcat_no_cumple', filtro({ limit: 500 })),
       api('v_ns_motivo', estado.mes ? { mes: 'eq.' + estado.mes } : {}, true),
       api('v_ns_subcat_motivo', estado.mes ? { mes: 'eq.' + estado.mes } : {}, true),
     ]);
-    const C = ['total_subcategorias', 'subcat_entregadas', 'subcat_no_entregadas'];
-    const T = sumar(st, C); const nsT = div(T.subcat_entregadas, T.total_subcategorias);
+    const filas = res.filter((f) => !estado.tienda || f.tienda_id === estado.tienda);
+    const mesesRes = [...new Set(res.map((f) => f.mes))].sort();
+    // mes elegido (o el último con datos) y los dos anteriores
+    const ref = estado.mes && mesesRes.includes(estado.mes) ? estado.mes : mesesRes[mesesRes.length - 1];
+    const tres = ref ? mesesRes.filter((m) => m <= ref).slice(-3) : [];
+    const delMes = (m) => filas.filter((f) => f.mes === m);
+    const tot = (m) => sumar(delMes(m), ['total', 'entregadas', 'no_entregadas']);
+    const T = ref ? tot(ref) : { total: 0, entregadas: 0, no_entregadas: 0 };
+    const nsT = div(T.entregadas, T.total);
+    const ant = tres.length > 1 ? tot(tres[tres.length - 2]) : null;
+    const nsAnt = ant ? div(ant.entregadas, ant.total) : null;
     const totInc = mot.reduce((s, f) => s + +f.n, 0);
+    const dif = nsT != null && nsAnt != null ? (nsT - nsAnt) * 100 : null;
     $('#nss-kpis').innerHTML =
-      kpi('NS por subcategoría', pct(nsT), `${n(T.subcat_entregadas)} de ${n(T.total_subcategorias)} subcategorías-tienda`, nsT != null && nsT < ROJO) +
+      kpi('NS por subcategoría' + (ref ? ' · ' + nombreMes(ref) : ''), pct(nsT, 0),
+        `${n(T.entregadas)} de ${n(T.total)} subcategorías` + (dif != null ? ` · ${dif >= 0 ? '▲' : '▼'} ${Math.abs(dif).toFixed(1)} pts vs mes anterior` : ''), nsT != null && nsT < ROJO) +
+      kpi('Subcategorías no entregadas en ≤ 96 h', n(T.no_entregadas), ref ? nombreMes(ref) : '') +
       kpi('Requerimientos que no cumplieron', n(totInc), 'NO CUMPLE + pendientes con más de 96 h · todas las tiendas') +
-      MOTIVOS.slice(0, 3).map((m) => { const v = mot.filter((f) => f.motivo === m).reduce((s, f) => s + +f.n, 0); return kpi(m, n(v), pct(div(v, totInc)) + ' del total'); }).join('');
+      MOTIVOS.slice(0, 2).map((m) => { const v = mot.filter((f) => f.motivo === m).reduce((s, f) => s + +f.n, 0); return kpi(m, n(v), pct(div(v, totInc)) + ' del total de requerimientos'); }).join('');
 
-    const tf = agrupar(st, 'tienda_id', C).map((f) => ({ ...f, ns: div(f.subcat_entregadas, f.total_subcategorias) })).sort((a, b) => (a.ns ?? 2) - (b.ns ?? 2));
-    tabla('#nss-tiendas', [
-      { t: 'Tienda', k: 'tienda' }, { t: 'Total subcategorías', k: (f) => n(f.total_subcategorias), n: true },
-      { t: 'Entregadas en ≤ 96 h', k: (f) => n(f.subcat_entregadas), n: true },
-      { t: 'No entregadas', k: (f) => n(f.subcat_no_entregadas), n: true },
-      { t: 'Nivel de servicio', k: (f) => pct(f.ns), n: true, cls: (f) => clsPct(f.ns) },
-    ], tf, tf.length > 1 ? { ...T, tienda: 'Total', ns: nsT } : null);
+    // ---- tabla de 3 meses lado a lado (como el resumen en Excel)
+    const el = $('#nss-tiendas');
+    if (!tres.length) { el.innerHTML = '<tr><td class="vacio">Aún no hay datos de subcategorías. Carga el archivo "tiempo_despacho_por_categoria_y_tienda".</td></tr>'; }
+    else {
+      const orden = new Map();
+      filas.forEach((f) => { if (!orden.has(f.tienda)) orden.set(f.tienda, f.tienda_id ? +f.tienda_id : 1e6); });
+      const tiendas = [...orden.keys()].filter((t) => tres.some((m) => delMes(m).some((f) => f.tienda === t)))
+        .sort((a, b) => orden.get(a) - orden.get(b) || a.localeCompare(b));
+      const celdas = (f) => {
+        if (!f || !f.total) return '<td class="n ini cero">—</td><td class="n cero">—</td><td class="n cero">—</td><td class="n cero">—</td>';
+        const v = div(f.entregadas, f.total);
+        return `<td class="n ini">${n(f.total)}</td><td class="n">${n(f.entregadas)}</td><td class="n">${n(f.no_entregadas)}</td>` +
+               `<td class="n ns-celda ${v < ROJO ? 'ns-bajo' : 'ns-ok'}">${pct(v, 0)}</td>`;
+      };
+      el.innerHTML = `<thead><tr><th rowspan="2">Tienda</th>${tres.map((m) => `<th colspan="4" class="mes">${nombreMes(m).toUpperCase()}</th>`).join('')}</tr>
+        <tr>${tres.map(() => '<th class="n ini">Total subcat.</th><th class="n">Entregado ≤ 96 h</th><th class="n">No entregado</th><th class="n">Nivel de servicio</th>').join('')}</tr></thead><tbody>` +
+        tiendas.map((t) => `<tr><td>${esc(t)}</td>${tres.map((m) => celdas(delMes(m).find((f) => f.tienda === t))).join('')}</tr>`).join('') +
+        (tiendas.length > 1 ? `<tr class="total"><td>Total</td>${tres.map((m) => celdas(tot(m))).join('')}</tr>` : '') + '</tbody>';
+    }
+
+    // ---- evolución mensual (todo el histórico)
+    const ultimos = mesesRes.slice(-12);
+    $('#nss-meses').innerHTML = `<div class="meses">${ultimos.map((m) => {
+      const f = tot(m); const v = div(f.entregadas, f.total) || 0;
+      return `<div class="mes-fila" data-tip="<b>${nombreMes(m)}</b><br>${n(f.entregadas)} de ${n(f.total)} subcategorías">
+        <span>${nombreMes(m)}</span><span class="pista"><i style="width:${v * 100}%"></i><span class="meta" style="left:${ROJO * 100}%"></span></span>
+        <span class="n ${clsPct(v)}">${pct(v, 0)}</span></div>`;
+    }).join('')}</div><p class="nota">Últimos 12 meses${estado.tienda ? ' · ' + esc(nombreTienda(estado.tienda)) : ' · todas las tiendas'}. La línea vertical marca la meta de ${pct(ROJO, 0)}.</p>`;
+
+    // ---- subcategorías que no cumplieron
+    $('#nss-nocumple-tit').textContent = `Subcategorías que no cumplieron (promedio > 96 h) · ${noc.length}`;
+    tabla('#nss-nocumple', [
+      { t: 'Tienda', k: 'tienda' }, { t: 'Subcategoría', k: (f) => `${f.sub_categoria_id} · ${f.subcategoria ?? ''}` },
+      { t: 'Categoría', k: 'categoria' },
+      { t: 'Horas prom.', k: (f) => (+f.horas_promedio).toFixed(1), n: true, cls: () => 'rojo' },
+      { t: 'Días', k: (f) => (+f.dias).toFixed(1), n: true }, { t: 'Líneas', k: (f) => n(f.lineas_skus), n: true },
+    ], noc);
 
     // motivo x ABC
     const cuenta = (filas, fm, fa) => filas.filter((f) => f.motivo === fm && (fa == null || f.abc === fa)).reduce((s, f) => s + +f.n, 0);

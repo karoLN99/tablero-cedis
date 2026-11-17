@@ -33,17 +33,21 @@ h1 { font-size: 18px; }
 h2 { font-size: 15px; color: var(--verde); }
 button, select { font: inherit; }
 
-/* ---------- barra superior ---------- */
+/* ---------- cabecera con logos ---------- */
+.cabecera { background: #fff; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; padding: 12px 24px; }
+.logos { display: flex; align-items: center; gap: 22px; }
+.logos img { display: block; width: auto; }
+.titulo { border-left: 3px solid var(--lima); padding-left: 18px; }
+.titulo h1 { color: var(--verde); font-size: 20px; }
+.sub { margin: 2px 0 0; font-size: 12.5px; color: var(--texto-2); }
+
+/* ---------- barra de menú ---------- */
 .barra {
   background: var(--verde); color: #fff;
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-  gap: 12px 24px; padding: 12px 24px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
+  gap: 12px 24px; padding: 8px 24px;
   border-bottom: 4px solid var(--lima);
 }
-.marca { display: flex; align-items: center; gap: 12px; }
-.logo { width: 34px; height: 34px; border-radius: 8px; background:
-  linear-gradient(135deg, var(--lima) 0 50%, var(--amarillo) 50% 100%); flex: none; }
-.sub { margin: 2px 0 0; font-size: 12px; opacity: .85; }
 .menu { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .menu .grupo { display: flex; align-items: center; gap: 6px; padding-left: 10px; margin-left: 4px;
   border-left: 1px solid rgba(255,255,255,.3); }
@@ -140,7 +144,22 @@ tr.total td { font-weight: bold; background: var(--lima-claro); border-top: 2px 
 .error { background: var(--rojo-claro); border: 1px solid var(--rojo); color: #5a120d; padding: 12px 16px; border-radius: 8px; }
 
 @media (max-width: 640px) {
-  .barra, .filtros, main { padding-left: 16px; padding-right: 16px; }
+  .logos img { height: 34px; }
+  .titulo { border-left: 0; padding-left: 0; }
+  .barra { justify-content: flex-start; }
+  .cabecera, .barra, .filtros, main { padding-left: 16px; padding-right: 16px; }
   .kpi .val { font-size: 24px; }
   .mes-fila { grid-template-columns: 70px 1fr 56px; }
 }
+
+/* resumen de 3 meses (NS por subcategoría) */
+table.meses3 th.mes { text-align: center; background: var(--amarillo); color: #3a2a00; border-left: 3px solid #fff; }
+table.meses3 th.ini, table.meses3 td.ini { border-left: 3px solid var(--borde); }
+table.meses3 th.ini { border-left-color: #fff; }
+td.ns-celda { font-weight: bold; }
+td.ns-bajo { background: var(--rojo-claro); color: var(--rojo); }
+td.ns-ok { background: #e3f1e6; color: var(--verde); }
+.separador { margin: 10px 0 -4px; font-size: 16px; color: var(--verde); border-top: 1px solid var(--borde); padding-top: 18px; }
+table.meses3 { font-size: 12.5px; }
+table.meses3 th { white-space: normal; line-height: 1.2; vertical-align: bottom; padding: 6px 7px; }
+table.meses3 td { padding: 5px 7px; }
