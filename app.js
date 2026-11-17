@@ -183,38 +183,80 @@
     if (estado.tienda) $('#ttl-sub-titulo').textContent += ' · todas las tiendas';
   }
 
-  // ------------------------------------------------------------------ NS general
-  const CAMPOS_NS = ['skus_requeridos', 'skus_entregados', 'req_con_existencia', 'req_sin_existencia', 'req_pendientes', 'pendientes_en_plazo'];
-  const nsVal = (f) => div(f.skus_entregados, f.skus_requeridos - f.pendientes_en_plazo);
+  // ------------------------------------------------------------------ NS general (picking)
+  const META_NSG = CFG.META_NS_GENERAL ?? 1;   // rojo si pickeados < requeridos
+
+  function tablaTresMeses(sel, filas, tres, campos, valor, meta, encabezados) {
+    const el = $(sel);
+    if (!tres.length) { el.innerHTML = '<tr><td class="vacio">Sin datos.</td></tr>'; return; }
+    const delMes = (m) => filas.filter((f) => f.mes === m);
+    const orden = new Map();
+    filas.forEach((f) => { if (!orden.has(f.tienda)) orden.set(f.tienda, f.tienda_id ? +f.tienda_id : 1e6); });
+    const tiendas = [...orden.keys()].filter((t) => tres.some((m) => delMes(m).some((f) => f.tienda === t)))
+      .sort((a, b) => orden.get(a) - orden.get(b) || a.localeCompare(b));
+    const nc = campos.length + 1;
+    const celdas = (f) => {
+      if (!f || !+f[campos[0]]) return Array(nc).fill(0).map((_, i) => `<td class="n cero${i ? '' : ' ini'}">—</td>`).join('');
+      const v = valor(f);
+      return campos.map((c, i) => `<td class="n${i ? '' : ' ini'}">${n(f[c])}</td>`).join('') +
+             `<td class="n ns-celda ${v < meta ? 'ns-bajo' : 'ns-ok'}">${pct(v, 0)}</td>`;
+    };
+    const tot = (m) => sumar(delMes(m), campos);
+    el.innerHTML = `<thead><tr><th rowspan="2">Tienda</th>${tres.map((m) => `<th colspan="${nc}" class="mes">${nombreMes(m).toUpperCase()}</th>`).join('')}</tr>
+      <tr>${tres.map(() => encabezados.map((e, i) => `<th class="n${i ? '' : ' ini'}">${e}</th>`).join('')).join('')}</tr></thead><tbody>` +
+      tiendas.map((t) => `<tr><td>${esc(t)}</td>${tres.map((m) => celdas(delMes(m).find((f) => f.tienda === t))).join('')}</tr>`).join('') +
+      (tiendas.length > 1 ? `<tr class="total"><td>Total</td>${tres.map((m) => celdas(tot(m))).join('')}</tr>` : '') + '</tbody>';
+  }
+
+  function barrasMes(sel, meses, totalDe, meta, nota) {
+    const vals = meses.map((m) => ({ m, ...totalDe(m) }));
+    const max = Math.max(1, meta, ...vals.map((x) => x.v || 0));
+    $(sel).innerHTML = `<div class="meses">${vals.map((x) => `<div class="mes-fila" data-tip="<b>${nombreMes(x.m)}</b><br>${x.tip}">
+        <span>${nombreMes(x.m)}</span><span class="pista"><i style="width:${(x.v || 0) / max * 100}%"></i><span class="meta" style="left:${meta / max * 100}%"></span></span>
+        <span class="n ${x.v < meta ? 'rojo' : ''}">${pct(x.v, 0)}</span></div>`).join('')}</div><p class="nota">${nota}</p>`;
+  }
 
   async function vistaNSGeneral() {
-    const todas = await api('v_ns_tienda', estado.tienda ? { tienda_id: 'eq.' + estado.tienda } : {}, true);
-    const delMes = todas.filter((f) => !estado.mes || f.mes === estado.mes);
-    const T = sumar(delMes, CAMPOS_NS); const ns = nsVal(T);
+    const [todas, dias] = await Promise.all([
+      api('v_ns_general_mes', {}, true),
+      api('v_ns_general_dia', filtro({ order: 'fecha.desc' }), true),
+    ]);
+    const filas = todas.filter((f) => !estado.tienda || f.tienda_id === estado.tienda);
+    const meses = [...new Set(todas.map((f) => f.mes))].sort();
+    const ref = estado.mes && meses.includes(estado.mes) ? estado.mes : meses[meses.length - 1];
+    const tres = ref ? meses.filter((m) => m <= ref).slice(-3) : [];
+    const C = ['skus_requeridos', 'skus_pickeados', 'skus_enviados'];
+    const tot = (m) => sumar(filas.filter((f) => f.mes === m), C);
+    const nsv = (f) => div(+f.skus_pickeados, +f.skus_requeridos);
+    const T = ref ? tot(ref) : sumar([], C); const ns = nsv(T);
+    const iAnt = tres.length > 1 ? tot(tres[tres.length - 2]) : null; const nsAnt = iAnt ? nsv(iAnt) : null;
+    const dif = ns != null && nsAnt != null ? (ns - nsAnt) * 100 : null;
+    const rango = filas.filter((f) => f.mes === ref);
+    const desde = rango.length ? rango.map((f) => f.desde).sort()[0] : null;
+    const hasta = rango.length ? rango.map((f) => f.hasta).sort().slice(-1)[0] : null;
+    const bajo = ref ? filas.filter((f) => f.mes === ref && nsv(f) != null && nsv(f) < META_NSG).length : 0;
+
     $('#nsg-kpis').innerHTML =
-      kpi('Nivel de servicio', pct(ns), `${n(T.skus_entregados)} de ${n(T.skus_requeridos - T.pendientes_en_plazo)} SKUs en ≤ 96 h`, ns != null && ns < ROJO) +
-      kpi('SKUs requeridos', n(T.skus_requeridos), `${n(T.pendientes_en_plazo)} aún dentro de 96 h`) +
-      kpi('No cumplidos con existencia', n(T.req_con_existencia), 'había stock en CEDIS') +
-      kpi('No cumplidos sin existencia', n(T.req_sin_existencia), 'sin stock o stock insuficiente') +
-      kpi('Pendientes', n(T.req_pendientes), 'sin entregar al corte');
+      kpi('Nivel de servicio' + (ref ? ' · ' + nombreMes(ref) : ''), pct(ns, 0),
+        (dif != null ? `${dif >= 0 ? '▲' : '▼'} ${Math.abs(dif).toFixed(1)} pts vs mes anterior` : ''), ns != null && ns < META_NSG) +
+      kpi('SKUs requeridos', n(T.skus_requeridos), desde ? `del ${fecha(desde)} al ${fecha(hasta)}` : '') +
+      kpi('SKUs entregados (pickeados)', n(T.skus_pickeados), `${n(T.skus_enviados)} enviados`) +
+      kpi('Tiendas debajo de 100%', n(bajo), ref ? nombreMes(ref) : '', bajo > 0);
 
-    const porMes = agrupar(todas, 'mes', CAMPOS_NS).sort((a, b) => a.mes.localeCompare(b.mes));
-    $('#nsg-meses').innerHTML = `<div class="meses">${porMes.map((f) => {
-      const v = nsVal(f) || 0;
-      return `<div class="mes-fila" data-tip="<b>${nombreMes(f.mes)}</b><br>${n(f.skus_entregados)} de ${n(f.skus_requeridos - f.pendientes_en_plazo)} SKUs">
-        <span>${nombreMes(f.mes)}</span><span class="pista"><i style="width:${v * 100}%"></i><span class="meta" style="left:${ROJO * 100}%" title="Meta ${pct(ROJO, 0)}"></span></span>
-        <span class="n ${clsPct(v)}">${pct(v)}</span></div>`;
-    }).join('')}</div><p class="nota">La línea vertical marca la meta de ${pct(ROJO, 0)}.</p>`;
+    tablaTresMeses('#nsg-tiendas', filas, tres, ['skus_requeridos', 'skus_pickeados'], nsv, META_NSG,
+      ['SKUs requeridos', 'SKUs entregados', 'Nivel de servicio']);
 
-    const tf = agrupar(delMes, 'tienda_id', CAMPOS_NS).map((f) => ({ ...f, ns: nsVal(f) })).sort((a, b) => (a.ns ?? 2) - (b.ns ?? 2));
-    tabla('#nsg-tiendas', [
-      { t: 'Tienda', k: 'tienda' }, { t: 'SKUs requeridos', k: (f) => n(f.skus_requeridos), n: true },
-      { t: 'SKUs entregados', k: (f) => n(f.skus_entregados), n: true },
-      { t: 'Req. con existencia', k: (f) => n(f.req_con_existencia), n: true },
-      { t: 'Req. sin existencia', k: (f) => n(f.req_sin_existencia), n: true },
-      { t: 'Req. pendientes', k: (f) => n(f.req_pendientes), n: true },
-      { t: 'Nivel de servicio', k: (f) => pct(f.ns), n: true, cls: (f) => clsPct(f.ns) },
-    ], tf, tf.length > 1 ? { ...T, tienda: 'Total', ns } : null);
+    barrasMes('#nsg-meses', meses.slice(-12), (m) => { const f = tot(m); return { v: nsv(f), tip: `${n(f.skus_pickeados)} de ${n(f.skus_requeridos)} SKUs` }; },
+      META_NSG, `Últimos 12 meses${estado.tienda ? ' · ' + esc(nombreTienda(estado.tienda)) : ' · todas las tiendas'}. La línea vertical marca 100%.`);
+
+    const porDia = agrupar(dias.filter((f) => !ref || f.mes === ref), 'fecha', C).sort((a, b) => b.fecha.localeCompare(a.fecha));
+    $('#nsg-dias-tit').textContent = `Por día · ${ref ? nombreMes(ref) : ''}`;
+    tabla('#nsg-dias', [
+      { t: 'Fecha', k: (f) => fecha(f.fecha) },
+      { t: 'SKUs requeridos', k: (f) => n(f.skus_requeridos), n: true },
+      { t: 'Pickeados', k: (f) => n(f.skus_pickeados), n: true },
+      { t: 'Enviados', k: (f) => n(f.skus_enviados), n: true },
+    ], porDia);
   }
 
   // ------------------------------------------------------------------ NS subcategorías
@@ -355,10 +397,10 @@
     const params = new URLSearchParams({ v: estado.vista, mes: estado.mes, tienda: estado.tienda });
     history.replaceState(null, '', '#' + params);
     document.querySelectorAll('.aviso-mes').forEach((x) => x.remove());
-    if (estado.mes && estado.mesesDetalle && !estado.mesesDetalle.has(estado.mes)) {
+    if (estado.vista !== 'ns-general' && estado.mes && estado.mesesDetalle && !estado.mesesDetalle.has(estado.mes)) {
       const txt = estado.vista === 'ns-sub'
         ? `${nombreMes(estado.mes)} viene del histórico: se muestra el resumen por tienda; los motivos (Reporte NS) solo existen desde que se cargan los archivos diarios.`
-        : `No hay detalle por línea de ${nombreMes(estado.mes)}: este menú se llena con los archivos diarios. El histórico de meses anteriores está en Nivel de servicio → Subcategorías.`;
+        : `No hay detalle por línea de ${nombreMes(estado.mes)}: este menú se llena con los archivos diarios. El histórico de meses anteriores está en Nivel de servicio → General y → Subcategorías.`;
       $('#v-' + estado.vista).insertAdjacentHTML('afterbegin', `<div class="aviso-mes">${txt}</div>`);
     }
     try { await VISTAS[estado.vista](); }
@@ -373,16 +415,17 @@
     }
     const h = new URLSearchParams(location.hash.slice(1));
     try {
-      const [corte, meses, tiendas, reportes, resumenSub] = await Promise.all([
+      const [corte, meses, tiendas, reportes, resumenSub, nsGeneral] = await Promise.all([
         api('v_corte'), api('v_meses'), api('tiendas', { order: 'tienda_id' }), api('reportes', { order: 'actualizado.desc' }),
         api('v_ns_subcat_resumen', {}, true).catch(() => []),
+        api('v_ns_general_mes', {}, true).catch(() => []),
       ]);
       estado.tiendas = tiendas; estado.reportes = reportes;
       const c = corte[0] || {};
       $('#corte').textContent = c.corte ? `Datos al corte del ${fecha(c.corte, true)} · actualizado ${fecha(c.cargado, true)}` : 'Aún no hay cargas';
       // meses con detalle por línea + meses del histórico de subcategorías
       const det = new Map(meses.map((m) => [m.mes, m]));
-      const todos = [...new Set([...det.keys(), ...resumenSub.map((f) => f.mes)])].sort().reverse();
+      const todos = [...new Set([...det.keys(), ...resumenSub.map((f) => f.mes), ...nsGeneral.map((f) => f.mes)])].sort().reverse();
       estado.mesesDetalle = new Set(det.keys());
       $('#f-mes').innerHTML = todos.map((m) => {
         const d = det.get(m);
