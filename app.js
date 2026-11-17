@@ -42,7 +42,7 @@
   const clsPct = (v) => (v != null && v < ROJO ? 'rojo' : '');
   const fecha = (s, hora = false) => {
     if (!s) return '—';
-    const d = new Date(s.replace(' ', 'T'));
+        const d = /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) : new Date(s.replace(' ', 'T'));
     const f = d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
     return hora ? f + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : f;
   };
@@ -150,7 +150,7 @@
       { t: 'Cant. requerida', k: (f) => n(f.cantidad), n: true },
       { t: 'Existencia CEDIS', k: (f) => n(f.ex_actual), n: true },
       { t: 'Creado', k: (f) => fecha(f.fecha_creacion, true) },
-      { t: 'Req.', k: 'req_id' },
+            { t: 'Req.', html: true, k: (f) => `<span title="${esc(f.req_id)}">${esc(String(f.req_id ?? '').slice(0, 8))}…</span>` },
     ], pend.slice(0, 100));
 
     // por tienda
