@@ -243,8 +243,12 @@
       kpi('SKUs entregados (pickeados)', n(T.skus_pickeados), `${n(T.skus_enviados)} enviados`) +
       kpi('Tiendas debajo de 100%', n(bajo), ref ? nombreMes(ref) : '', bajo > 0);
 
-    tablaTresMeses('#nsg-tiendas', filas, tres, ['skus_requeridos', 'skus_pickeados'], nsv, META_NSG,
-      ['SKUs requeridos', 'SKUs entregados', 'Nivel de servicio']);
+    const previos = ref ? meses.filter((m) => m < ref).slice(-3) : [];
+    const encG = ['SKUs requeridos', 'SKUs entregados', 'Nivel de servicio'];
+    $('#nsg-tit').textContent = `Nivel de servicio general · ${ref ? nombreMes(ref) : ''}`;
+    tablaTresMeses('#nsg-tiendas', filas, ref ? [ref] : [], ['skus_requeridos', 'skus_pickeados'], nsv, META_NSG, encG);
+    $('#nsg-tres-tit').textContent = previos.length ? `Últimos 3 meses cerrados · ${nombreMes(previos[0])} a ${nombreMes(previos[previos.length - 1])}` : 'Últimos 3 meses cerrados';
+    tablaTresMeses('#nsg-tres', filas, previos, ['skus_requeridos', 'skus_pickeados'], nsv, META_NSG, encG);
 
     barrasMes('#nsg-meses', meses.slice(-12), (m) => { const f = tot(m); return { v: nsv(f), tip: `${n(f.skus_pickeados)} de ${n(f.skus_requeridos)} SKUs` }; },
       META_NSG, `Últimos 12 meses${estado.tienda ? ' · ' + esc(nombreTienda(estado.tienda)) : ' · todas las tiendas'}. La línea vertical marca 100%.`);
@@ -290,25 +294,14 @@
       kpi('Requerimientos que no cumplieron', n(totInc), 'NO CUMPLE + pendientes con más de 96 h · todas las tiendas') +
       MOTIVOS.slice(0, 2).map((m) => { const v = mot.filter((f) => f.motivo === m).reduce((s, f) => s + +f.n, 0); return kpi(m, n(v), pct(div(v, totInc)) + ' del total de requerimientos'); }).join('');
 
-    // ---- tabla de 3 meses lado a lado (como el resumen en Excel)
-    const el = $('#nss-tiendas');
-    if (!tres.length) { el.innerHTML = '<tr><td class="vacio">Aún no hay datos de subcategorías. Carga el archivo "tiempo_despacho_por_categoria_y_tienda".</td></tr>'; }
-    else {
-      const orden = new Map();
-      filas.forEach((f) => { if (!orden.has(f.tienda)) orden.set(f.tienda, f.tienda_id ? +f.tienda_id : 1e6); });
-      const tiendas = [...orden.keys()].filter((t) => tres.some((m) => delMes(m).some((f) => f.tienda === t)))
-        .sort((a, b) => orden.get(a) - orden.get(b) || a.localeCompare(b));
-      const celdas = (f) => {
-        if (!f || !f.total) return '<td class="n ini cero">—</td><td class="n cero">—</td><td class="n cero">—</td><td class="n cero">—</td>';
-        const v = div(f.entregadas, f.total);
-        return `<td class="n ini">${n(f.total)}</td><td class="n">${n(f.entregadas)}</td><td class="n">${n(f.no_entregadas)}</td>` +
-               `<td class="n ns-celda ${v < ROJO ? 'ns-bajo' : 'ns-ok'}">${pct(v, 0)}</td>`;
-      };
-      el.innerHTML = `<thead><tr><th rowspan="2">Tienda</th>${tres.map((m) => `<th colspan="4" class="mes">${nombreMes(m).toUpperCase()}</th>`).join('')}</tr>
-        <tr>${tres.map(() => '<th class="n ini">Total subcat.</th><th class="n">Entregado ≤ 96 h</th><th class="n">No entregado</th><th class="n">Nivel de servicio</th>').join('')}</tr></thead><tbody>` +
-        tiendas.map((t) => `<tr><td>${esc(t)}</td>${tres.map((m) => celdas(delMes(m).find((f) => f.tienda === t))).join('')}</tr>`).join('') +
-        (tiendas.length > 1 ? `<tr class="total"><td>Total</td>${tres.map((m) => celdas(tot(m))).join('')}</tr>` : '') + '</tbody>';
-    }
+    // ---- mes elegido y, aparte, los 3 meses cerrados anteriores
+    const nsSub = (f) => div(+f.entregadas, +f.total);
+    const encS = ['Total subcat.', 'Entregado ≤ 96 h', 'No entregado', 'Nivel de servicio'];
+    const previos = ref ? mesesRes.filter((m) => m < ref).slice(-3) : [];
+    $('#nss-tit').textContent = `Nivel de servicio por subcategoría · ${ref ? nombreMes(ref) : ''}`;
+    tablaTresMeses('#nss-tiendas', filas, ref ? [ref] : [], ['total', 'entregadas', 'no_entregadas'], nsSub, ROJO, encS);
+    $('#nss-tres-tit').textContent = previos.length ? `Últimos 3 meses cerrados · ${nombreMes(previos[0])} a ${nombreMes(previos[previos.length - 1])}` : 'Últimos 3 meses cerrados';
+    tablaTresMeses('#nss-tres', filas, previos, ['total', 'entregadas', 'no_entregadas'], nsSub, ROJO, encS);
 
     // ---- evolución mensual (todo el histórico)
     const ultimos = mesesRes.slice(-12);
@@ -368,7 +361,7 @@
   // ------------------------------------------------------------------ descargas
   function pintarDescargas() {
     const tipos = estado.vista === 'ttl' ? ['ttl', 'ns_subcategoria'] : estado.vista === 'ns-sub' ? ['ns_subcategoria'] : [];
-    const nombres = { ttl: 'Excel TTL', ns_subcategoria: 'Reporte NS por subcategoría' };
+    const nombres = { ttl: 'Análisis TTL (Excel)', ns_subcategoria: 'Reporte NS por subcategoría' };
     const html = tipos.map((t) => {
       const r = estado.reportes.filter((x) => x.tipo === t && (!estado.mes || x.ruta.includes(estado.mes)))[0]
              || estado.reportes.filter((x) => x.tipo === t)[0];

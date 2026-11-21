@@ -164,3 +164,20 @@ table.meses3 { font-size: 12.5px; }
 table.meses3 th { white-space: normal; line-height: 1.2; vertical-align: bottom; padding: 6px 7px; }
 table.meses3 td { padding: 5px 7px; }
 .aviso-mes { background: #fff8e1; border: 1px solid var(--amarillo); color: #5a4500; padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+
+/* ---------- "¿Qué muestra cada apartado?" ---------- */
+.leeme { background: #fbfcf7; border-color: var(--lima); }
+.leeme summary { cursor: pointer; font-weight: bold; color: var(--verde); font-size: 15px; list-style: none; display: flex; align-items: center; gap: 8px; }
+.leeme summary::-webkit-details-marker { display: none; }
+.leeme summary::before { content: "ⓘ"; font-size: 17px; }
+.leeme summary::after { content: "▾ ver"; margin-left: auto; font-weight: normal; font-size: 12.5px; color: var(--texto-3); }
+.leeme details[open] summary::after { content: "▴ ocultar"; }
+.leeme details[open] summary { margin-bottom: 8px; }
+.leeme h4 { margin: 16px 0 6px; font-size: 13.5px; color: var(--verde); border-bottom: 1px solid var(--borde); padding-bottom: 3px; }
+.leeme p { margin: 6px 0; color: var(--texto-2); font-size: 13px; max-width: 980px; }
+.leeme dl { display: grid; grid-template-columns: minmax(150px, 260px) 1fr; gap: 6px 16px; margin: 6px 0; font-size: 13px; max-width: 1100px; }
+.leeme dt { font-weight: bold; color: var(--texto); }
+.leeme dd { margin: 0; color: var(--texto-2); }
+.leeme .ok { color: var(--verde); font-weight: bold; }
+@media (max-width: 640px) { .leeme dl { grid-template-columns: 1fr; gap: 2px; } .leeme dd { margin-bottom: 6px; } }
+table.meses3.un-mes { max-width: 900px; }

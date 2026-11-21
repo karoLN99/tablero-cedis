@@ -66,15 +66,53 @@
         <div class="tabla-scroll alto"><table id="ttl-sub"></table></div>
       </article>
     </div>
+    <article class="tarjeta leeme">
+      <details>
+        <summary>¿Qué muestra cada apartado? · TTL</summary>
+        <p>El <b>TTL (time to live)</b> es el plazo que tiene cada línea de requerimiento para llegar a la tienda: <b>15 días (360 h)</b> desde que se crea. Fuente: archivo <i>totalidad de requerimientos</i> y <i>existencias del CEDIS</i>. Las líneas creadas el mismo día de la extracción no se cuentan, porque ese día está incompleto.</p>
+        <h4>Indicadores</h4>
+        <dl>
+          <dt>Cumplimiento por línea</dt><dd>Líneas entregadas dentro de los 15 días ÷ líneas con resultado. Las pendientes que todavía están en plazo no cuentan en contra.</dd>
+          <dt>Cumplimiento por requerimiento</dt><dd>Un requerimiento cumple cuando todas sus líneas se entregaron dentro del TTL. Los que siguen abiertos y en plazo no se cuentan.</dd>
+          <dt>Líneas vencidas</dt><dd>Se entregaron después de los 15 días o pasaron los 15 días sin entregarse.</dd>
+          <dt>Pendientes vigentes</dt><dd>Aún no se entregan pero siguen dentro del plazo. Se indica cuándo vence la primera.</dd>
+          <dt>Mediana de entrega</dt><dd>Horas que tarda la entrega típica: la mitad de las líneas se entregó en menos tiempo y la otra mitad en más.</dd>
+          <dt>TTL restante promedio al entregar</dt><dd>Qué porcentaje del plazo quedaba, en promedio, cuando llegó la mercancía. 100% = se entregó de inmediato; 0% = se agotó el plazo.</dd>
+        </dl>
+        <h4>Distribución del TTL restante al entregar</h4>
+        <p>Reparte las líneas con resultado según cuánto plazo les sobraba: <b>Alto</b> 75–100%, <b>Medio</b> 50–75%, <b>Bajo</b> 25–50%, <b>Crítico</b> 0–25% y <b>Vencido</b> (tarde o sin entregar).</p>
+        <h4>Pendientes con stock en CEDIS y menos tiempo de vida</h4>
+        <p>Líneas pendientes, todavía en plazo, cuyo producto <b>sí tiene existencia en el CEDIS</b> (existencia actual ≥ cantidad pedida). Van ordenadas de menor a mayor TTL restante: son las primeras que conviene despachar porque hay mercancía y se les acaba el tiempo. <i>Descargar lista (CSV)</i> baja la tabla completa para trabajarla en Excel.</p>
+        <h4>Por tienda</h4>
+        <p>Los mismos indicadores separados por tienda, ordenados de más a menos líneas vencidas. El porcentaje en rojo indica cumplimiento menor a 95%.</p>
+        <h4>Subcategorías</h4>
+        <p>Si hay líneas vencidas, muestra las <b>subcategorías afectadas</b> (vencidas de cuántas líneas y su cumplimiento). Si todavía no vence nada, muestra las <b>subcategorías con más pendientes</b>. Siempre considera todas las tiendas.</p>
+        <h4>Descargas</h4>
+        <dl>
+          <dt>Análisis TTL (Excel)</dt><dd>El entregable completo de TTL (README, Resumen con gestores, detalle por línea y por requerimiento), generado con <i>ttl_entregable.py</i>.</dd>
+          <dt>Reporte NS por subcategoría</dt><dd>El reporte de requerimientos que no cumplieron las 96 h, por motivo (ver menú Subcategorías).</dd>
+        </dl>
+        <h4>Filtros y datos</h4>
+        <dl>
+          <dt>Mes y Tienda</dt><dd>Filtran todo el menú. La dirección de la página guarda los filtros, así que puedes compartir un enlace que ya abra en una tienda o un mes.</dd>
+          <dt>Corte</dt><dd>Fecha y hora de la extracción del sistema que se cargó por última vez. El tablero se actualiza una vez al día.</dd>
+        </dl>
+      </details>
+    </article>
   </section>
 
   <!-- ======================= NS GENERAL ======================= -->
   <section id="v-ns-general" class="vista" hidden>
     <div class="kpis" id="nsg-kpis"></div>
     <article class="tarjeta">
-      <h2>Nivel de servicio general · por tienda</h2>
-      <p class="nota">SKUs entregados (pickeados) ÷ SKUs requeridos, según el último reporte de solicitudes de picking. Se muestran el mes elegido y los dos anteriores.</p>
-      <div class="tabla-scroll"><table id="nsg-tiendas" class="meses3"></table></div>
+      <h2 id="nsg-tit">Nivel de servicio general · por tienda</h2>
+      <p class="nota">SKUs entregados (pickeados) ÷ SKUs requeridos, según el último reporte de solicitudes de picking.</p>
+      <div class="tabla-scroll"><table id="nsg-tiendas" class="meses3 un-mes"></table></div>
+    </article>
+    <article class="tarjeta">
+      <h2 id="nsg-tres-tit">Últimos 3 meses cerrados</h2>
+      <p class="nota">Los tres meses anteriores al mes elegido, sin contar el mes en curso.</p>
+      <div class="tabla-scroll"><table id="nsg-tres" class="meses3"></table></div>
     </article>
     <div class="dos-col">
       <article class="tarjeta">
@@ -87,15 +125,46 @@
         <div class="tabla-scroll alto"><table id="nsg-dias"></table></div>
       </article>
     </div>
+    <article class="tarjeta leeme">
+      <details>
+        <summary>¿Qué muestra cada apartado? · Nivel de servicio general</summary>
+        <p><b>Nivel de servicio = SKUs entregados (pickeados) ÷ SKUs requeridos</b>, por tienda y por mes. Fuente: <i>resumen de solicitudes de picking detallado por día</i>. Siempre se usa el último archivo cargado: si el sistema ajusta cifras de días anteriores, el tablero toma las nuevas.</p>
+        <p>Puede pasar de 100%: en un mes se pickean también pedidos que quedaron de días o meses anteriores. En <span class="ok">verde</span> ≥ 100%; en <span class="rojo">rojo</span> menor a 100%.</p>
+        <h4>Indicadores</h4>
+        <dl>
+          <dt>Nivel de servicio</dt><dd>Del mes elegido, con la diferencia en puntos contra el mes anterior.</dd>
+          <dt>SKUs requeridos / entregados</dt><dd>Totales del mes, con el rango de días que incluye. También se indica cuántos SKUs se enviaron.</dd>
+          <dt>Tiendas debajo de 100%</dt><dd>Cuántas tiendas entregaron menos de lo que pidieron en el mes.</dd>
+        </dl>
+        <h4>Nivel de servicio general · por tienda</h4>
+        <p>SKUs requeridos, entregados y nivel de servicio de cada tienda en el mes elegido (normalmente el mes en curso).</p>
+        <h4>Últimos 3 meses cerrados</h4>
+        <p>Los tres meses anteriores al mes elegido, lado a lado, para comparar. Si eliges noviembre, muestra agosto, septiembre y octubre.</p>
+        <h4>Evolución mensual</h4>
+        <p>Nivel de servicio de los últimos 12 meses. La línea vertical marca 100%.</p>
+        <h4>Por día</h4>
+        <p>SKUs requeridos, pickeados y enviados cada día del mes. No lleva porcentaje: lo que se pickea un día no siempre corresponde a lo que se pidió ese mismo día, por eso el nivel de servicio se mide por mes.</p>
+        <h4>Filtros y datos</h4>
+        <dl>
+          <dt>Mes y Tienda</dt><dd>Filtran todo el menú. La dirección de la página guarda los filtros, así que puedes compartir un enlace que ya abra en una tienda o un mes.</dd>
+          <dt>Corte</dt><dd>Fecha y hora de la extracción del sistema que se cargó por última vez. El tablero se actualiza una vez al día.</dd>
+        </dl>
+      </details>
+    </article>
   </section>
 
   <!-- ======================= NS SUBCATEGORÍAS ======================= -->
   <section id="v-ns-sub" class="vista" hidden>
     <div class="kpis" id="nss-kpis"></div>
     <article class="tarjeta">
-      <h2>Nivel de servicio por subcategoría · resumen por tienda</h2>
-      <p class="nota">Una subcategoría cumple cuando su tiempo promedio de despacho a la tienda es ≤ 96 h. Se muestran el mes elegido y los dos anteriores.</p>
-      <div class="tabla-scroll"><table id="nss-tiendas" class="meses3"></table></div>
+      <h2 id="nss-tit">Nivel de servicio por subcategoría · resumen por tienda</h2>
+      <p class="nota">Una subcategoría cumple cuando su tiempo promedio de despacho a la tienda es ≤ 96 h.</p>
+      <div class="tabla-scroll"><table id="nss-tiendas" class="meses3 un-mes"></table></div>
+    </article>
+    <article class="tarjeta">
+      <h2 id="nss-tres-tit">Últimos 3 meses cerrados</h2>
+      <p class="nota">Los tres meses anteriores al mes elegido, sin contar el mes en curso.</p>
+      <div class="tabla-scroll"><table id="nss-tres" class="meses3"></table></div>
     </article>
     <div class="dos-col">
       <article class="tarjeta">
@@ -124,6 +193,39 @@
         <label class="inline">Motivo <select id="nss-f-motivo"></select></label>
       </div>
       <div class="tabla-scroll alto"><table id="nss-matriz"></table></div>
+    </article>
+    <article class="tarjeta leeme">
+      <details>
+        <summary>¿Qué muestra cada apartado? · Subcategorías</summary>
+        <h4>Nivel de servicio por subcategoría (parte de arriba)</h4>
+        <p>Para cada tienda se cuentan las subcategorías que pidió en el mes. Una subcategoría <b>cumple</b> cuando su <b>tiempo promedio de despacho es de 96 h o menos</b>. Fuente: <i>tiempo de despacho por categoría y tienda</i>; los meses anteriores salen del histórico <i>Nivel de Servicio por Sub Categorías</i>.</p>
+        <dl>
+          <dt>NS por subcategoría</dt><dd>Subcategorías que cumplieron ÷ subcategorías pedidas, con la diferencia contra el mes anterior.</dd>
+          <dt>Resumen por tienda</dt><dd>El mes elegido: total de subcategorías, entregadas en ≤ 96 h, no entregadas y nivel de servicio. En rojo, menor a 95%.</dd>
+          <dt>Últimos 3 meses cerrados</dt><dd>Los tres meses anteriores al mes elegido, lado a lado, sin contar el mes en curso.</dd>
+          <dt>Evolución mensual</dt><dd>Nivel de servicio por subcategoría de los últimos 12 meses.</dd>
+          <dt>Subcategorías que no cumplieron</dt><dd>Las que tuvieron un promedio mayor a 96 h, con sus horas y días promedio y cuántas líneas tuvieron. Ordenadas de la más tardada a la menos.</dd>
+        </dl>
+        <h4>Requerimientos que no cumplieron · Reporte NS (parte de abajo)</h4>
+        <p>Toma las líneas que <b>no cumplieron las 96 h</b>: las marcadas como NO CUMPLE y las pendientes con más de 96 h al corte. A cada una le asigna un <b>motivo</b> según la existencia del CEDIS el día que se creó el requerimiento y 4 días después:</p>
+        <dl>
+          <dt>Sin Stock en Cedis</dt><dd>No había existencia (cero, negativa o el producto no tiene registro).</dd>
+          <dt>Sin stock suficiente</dt><dd>Había existencia, pero menos de lo pedido el día de creación o 4 días después.</dd>
+          <dt>Con stock similar a lo requerido</dt><dd>La existencia era casi igual a lo pedido (hasta 3 unidades más).</dd>
+          <dt>Con stock en cedis</dt><dd>Había mercancía suficiente y aun así no se entregó a tiempo: es un retraso de operación.</dd>
+        </dl>
+        <dl>
+          <dt>Por motivo y ABC</dt><dd>Cuántos requerimientos hay de cada motivo según la clasificación ABC del producto, y qué porcentaje del total representan.</dd>
+          <dt>Por estatus</dt><dd>Cuántos de cada motivo están NO CUMPLE (se entregaron tarde) y cuántos siguen PENDIENTES.</dd>
+          <dt>Subcategorías por tienda</dt><dd>Para el motivo elegido, cuántos requerimientos tuvo cada subcategoría en cada tienda, de mayor a menor. Equivale a la hoja TD-CSCD del reporte.</dd>
+          <dt>Reporte NS por subcategoría (descarga)</dt><dd>El libro de Excel con todo este análisis y su detalle (hojas TD-General, TD-CSCD, ABC SubC y BD).</dd>
+        </dl>
+        <h4>Filtros y datos</h4>
+        <dl>
+          <dt>Mes y Tienda</dt><dd>Filtran todo el menú. La dirección de la página guarda los filtros, así que puedes compartir un enlace que ya abra en una tienda o un mes.</dd>
+          <dt>Corte</dt><dd>Fecha y hora de la extracción del sistema que se cargó por última vez. El tablero se actualiza una vez al día.</dd>
+        </dl>
+      </details>
     </article>
   </section>
 </main>
