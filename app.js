@@ -294,6 +294,11 @@
       kpi('Requerimientos que no cumplieron', n(totInc), 'NO CUMPLE + pendientes con más de 96 h · todas las tiendas') +
       MOTIVOS.slice(0, 2).map((m) => { const v = mot.filter((f) => f.motivo === m).reduce((s, f) => s + +f.n, 0); return kpi(m, n(v), pct(div(v, totInc)) + ' del total de requerimientos'); }).join('');
 
+    // ---- pendientes con stock por antigüedad (última carga; respeta tienda, no mes)
+    const pend = await api('v_ns_pendientes_stock', estado.tienda ? { tienda_id: 'eq.' + estado.tienda, order: 'horas.desc' } : { order: 'horas.desc' }, true);
+    estado.pendNS = pend;
+    pintarPendientesNS();
+
     // ---- mes elegido y, aparte, los 3 meses cerrados anteriores
     const nsSub = (f) => div(+f.entregadas, +f.total);
     const encS = ['Total subcat.', 'Entregado ≤ 96 h', 'No entregado', 'Nivel de servicio'];
@@ -338,6 +343,45 @@
       selM.onchange = () => pintarMatriz(estado.matriz);
     }
     estado.matriz = mat; pintarMatriz(mat);
+  }
+
+  const COLS_PEND_NS = (conMotivo) => [
+    { t: 'Horas', k: (f) => (+f.horas).toFixed(0) + ' h', n: true, cls: (f) => (+f.horas >= 96 ? 'rojo' : '') },
+    { t: 'Tienda', k: 'tienda' },
+    { t: 'Producto', k: (f) => `${f.producto_id} · ${f.producto_nombre ?? ''}`, wrap: true },
+    { t: 'ABC', k: 'abc' },
+    { t: 'Subcategoría', k: (f) => `${f.sub_categoria_id} · ${f.subcategoria}` },
+    { t: 'Cant. requerida', k: (f) => n(f.cantidad), n: true },
+    { t: 'Existencia CEDIS', k: (f) => n(f.ex_actual), n: true },
+    ...(conMotivo ? [{ t: 'Motivo', k: (f) => f.ns_motivo ?? '' }] : []),
+    { t: 'Creado', k: (f) => fecha(f.fecha_creacion, true) },
+    { t: 'Req.', html: true, k: (f) => `<span title="${esc(f.req_id)}">${esc(String(f.req_id ?? '').slice(0, 8))}…</span>` },
+  ];
+  const MAX_FILAS = 300;
+  function filasPend72() {
+    const [a, b] = $('#nss-p72-rango').value.split('-').map(Number);
+    return (estado.pendNS || []).filter((f) => +f.horas >= a && +f.horas < b);
+  }
+  function filasPend96() { return (estado.pendNS || []).filter((f) => +f.horas >= 96); }
+  function pintarPendientesNS() {
+    const p72 = filasPend72(), p96 = filasPend96();
+    const rango = $('#nss-p72-rango').value.replace('-', ' a ');
+    $('#nss-p72-tit').textContent = `Pendientes con stock · ${rango} h · ${n(p72.length)} líneas`;
+    $('#nss-p96-tit').textContent = `Pendientes con stock y más de 96 h · ${n(p96.length)} líneas`;
+    tabla('#nss-p72', COLS_PEND_NS(false), p72.slice(0, MAX_FILAS));
+    tabla('#nss-p96', COLS_PEND_NS(true), p96.slice(0, MAX_FILAS));
+    if (p72.length > MAX_FILAS) $('#nss-p72').insertAdjacentHTML('beforeend', `<tr><td colspan="9" class="vacio">Se muestran ${MAX_FILAS} de ${n(p72.length)}. Descarga el CSV para ver todas.</td></tr>`);
+    if (p96.length > MAX_FILAS) $('#nss-p96').insertAdjacentHTML('beforeend', `<tr><td colspan="10" class="vacio">Se muestran ${MAX_FILAS} de ${n(p96.length)}. Descarga el CSV para ver todas.</td></tr>`);
+  }
+  function descargarCSV(filas, nombre) {
+    const cols = ['tienda_id', 'tienda', 'req_id', 'id_req_d', 'fecha_creacion', 'horas', 'producto_id', 'producto_nombre', 'abc',
+                  'sub_categoria_id', 'subcategoria', 'categoria', 'cantidad', 'ex_crea', 'ex_actual', 'ns_motivo', 'gestor'];
+    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = '\ufeff' + cols.join(',') + '\n' + filas.map((r) => cols.map((c) => q(r[c])).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = nombre + (estado.tienda ? '_t' + estado.tienda : '') + '.csv';
+    a.click();
   }
 
   function pintarMatriz(mat) {
@@ -438,6 +482,9 @@
     $('#f-tienda').onchange = (e) => { estado.tienda = e.target.value; pintar(); };
     document.querySelectorAll('.menu button').forEach((b) => (b.onclick = () => { estado.vista = b.dataset.vista; pintar(); }));
     $('#ttl-pend-csv').onclick = csvPendientes;
+    $('#nss-p72-rango').onchange = pintarPendientesNS;
+    $('#nss-p72-csv').onclick = () => descargarCSV(filasPend72(), 'pendientes_con_stock_' + $('#nss-p72-rango').value + 'h');
+    $('#nss-p96-csv').onclick = () => descargarCSV(filasPend96(), 'pendientes_con_stock_mas_96h');
     pintar();
   }
   iniciar();

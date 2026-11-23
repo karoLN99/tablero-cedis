@@ -181,3 +181,4 @@ table.meses3 td { padding: 5px 7px; }
 .leeme .ok { color: var(--verde); font-weight: bold; }
 @media (max-width: 640px) { .leeme dl { grid-template-columns: 1fr; gap: 2px; } .leeme dd { margin-bottom: 6px; } }
 table.meses3.un-mes { max-width: 900px; }
+.acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
