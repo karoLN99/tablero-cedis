@@ -180,7 +180,7 @@
         <h2 id="nss-p96-tit">Pendientes con stock y más de 96 h</h2>
         <button class="btn-sec" id="nss-p96-csv">Descargar lista (CSV)</button>
       </div>
-      <p class="nota">Ya no cumplieron el nivel de servicio y la mercancía sí está en el CEDIS: son atraso de operación que se puede despachar hoy. De la más antigua a la más reciente.</p>
+      <p class="nota">Ya no cumplieron el nivel de servicio y la mercancía sí está en el CEDIS: son atraso de operación que se puede despachar hoy. No se incluyen las de más de 15 días, porque a ese plazo el requerimiento se anula automáticamente. De la más antigua a la más reciente.</p>
       <div class="tabla-scroll alto"><table id="nss-p96"></table></div>
     </article>
     <article class="tarjeta">
@@ -226,7 +226,7 @@
           <dt>Resumen por tienda</dt><dd>El mes elegido: total de subcategorías, entregadas en ≤ 96 h, no entregadas y nivel de servicio. En rojo, menor a 95%.</dd>
           <dt>Últimos 3 meses cerrados</dt><dd>Los tres meses anteriores al mes elegido, lado a lado, sin contar el mes en curso.</dd>
           <dt>Pendientes con stock por cumplir 72 h</dt><dd>Líneas sin entregar que hoy tienen existencia suficiente en el CEDIS y llevan entre 48 y 72 h (o entre 72 y 96 h, según el selector). Son las que todavía alcanzan a cumplir las 96 h si se despachan ya.</dd>
-          <dt>Pendientes con stock y más de 96 h</dt><dd>Líneas sin entregar con más de 96 h cuyo producto sí tiene existencia en el CEDIS. Ya incumplieron; la columna "Motivo" indica cómo se clasificó (por ejemplo, si al crearse no había stock y llegó después). Ambas listas usan la última carga, respetan el filtro de tienda pero no el de mes, y se pueden descargar en CSV.</dd>
+          <dt>Pendientes con stock y más de 96 h</dt><dd>Líneas sin entregar con más de 96 h y menos de 15 días (a los 15 días el requerimiento se anula automáticamente) cuyo producto sí tiene existencia en el CEDIS. Ya incumplieron; la columna "Motivo" indica cómo se clasificó (por ejemplo, si al crearse no había stock y llegó después). Ambas listas usan la última carga, respetan el filtro de tienda pero no el de mes, y se pueden descargar en CSV.</dd>
           <dt>Evolución mensual</dt><dd>Nivel de servicio por subcategoría de los últimos 12 meses.</dd>
           <dt>Subcategorías que no cumplieron</dt><dd>Las que tuvieron un promedio mayor a 96 h, con sus horas y días promedio y cuántas líneas tuvieron. Ordenadas de la más tardada a la menos.</dd>
         </dl>
