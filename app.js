@@ -427,7 +427,97 @@
   }
 
   // ------------------------------------------------------------------ navegación
-  const VISTAS = { 'ttl': vistaTTL, 'ns-general': vistaNSGeneral, 'ns-sub': vistaNSSub };
+  // ------------------------------------------------------------------ SIN STOCK
+  async function vistaSinStock() {
+    const filas = await api('v_pendientes_sin_stock', estado.tienda ? { tienda_id: 'eq.' + estado.tienda, order: 'horas.desc' } : { order: 'horas.desc' }, true);
+    estado.sinStock = filas;
+    const abc = [...new Set(filas.map((f) => f.abc).filter(Boolean))].sort();
+    const sel = $('#ss-abc'), prev = sel.value;
+    sel.innerHTML = '<option value="">Todas</option>' + abc.map((a) => `<option>${esc(a)}</option>`).join('');
+    if (abc.includes(prev)) sel.value = prev;
+    pintarSinStock();
+  }
+  function filtrarSinStock() {
+    const q = ($('#ss-buscar').value || '').trim().toLowerCase();
+    const abc = $('#ss-abc').value, ex = $('#ss-exist').value;
+    return (estado.sinStock || []).filter((f) =>
+      (!abc || f.abc === abc) &&
+      (!ex || (ex === 'cero' ? +f.existencia <= 0 : +f.existencia > 0)) &&
+      (!q || [f.producto_id, f.producto_nombre, f.sub_categoria_id, f.subcategoria, f.categoria].some((x) => String(x ?? '').toLowerCase().includes(q))));
+  }
+  function pintarSinStock() {
+    const F = filtrarSinStock(); estado.sinStockFiltrado = F;
+    const total = (estado.sinStock || []).length;
+    $('#ss-nota-filtro').textContent = F.length === total ? '' : `Mostrando ${n(F.length)} de ${n(total)} líneas`;
+    const uni = F.reduce((a, f) => a + +f.cantidad, 0);
+    const cero = F.filter((f) => +f.existencia <= 0).length;
+    $('#ss-kpis').innerHTML =
+      kpi('Líneas sin stock para despachar', n(F.length), estado.tienda ? esc(nombreTienda(estado.tienda)) : 'todas las tiendas', F.length > 0) +
+      kpi('Requerimientos afectados', n(new Set(F.map((f) => f.req_id)).size), `${n(new Set(F.map((f) => f.tienda_id)).size)} tiendas`) +
+      kpi('Productos', n(new Set(F.map((f) => f.producto_id)).size), 'distintos sin stock suficiente') +
+      kpi('Unidades pedidas', n(uni), 'en esas líneas') +
+      kpi('Con existencia cero', n(cero), pct(div(cero, F.length)) + ' de las líneas');
+
+    // por tienda
+    const porT = agrupar(F.map((f) => ({ ...f, lineas: 1, unidades: +f.cantidad })), 'tienda_id', ['lineas', 'unidades'])
+      .sort((a, b) => b.lineas - a.lineas);
+    tabla('#ss-tiendas', [{ t: 'Tienda', k: 'tienda' }, { t: 'Líneas', k: (f) => n(f.lineas), n: true }, { t: 'Unidades', k: (f) => n(f.unidades), n: true }],
+      porT, porT.length > 1 ? { tienda: 'Total', lineas: F.length, unidades: uni } : null);
+    // por categoría
+    const porC = agrupar(F.map((f) => ({ ...f, lineas: 1, unidades: +f.cantidad })), 'categoria', ['lineas', 'unidades'])
+      .sort((a, b) => b.lineas - a.lineas);
+    tabla('#ss-cats', [{ t: 'Categoría', k: 'categoria' }, { t: 'Líneas', k: (f) => n(f.lineas), n: true }, { t: 'Unidades', k: (f) => n(f.unidades), n: true }], porC);
+
+    // por producto
+    const m = new Map();
+    F.forEach((f) => {
+      if (!m.has(f.producto_id)) m.set(f.producto_id, { producto_id: f.producto_id, producto_nombre: f.producto_nombre, abc: f.abc,
+        sub_categoria_id: f.sub_categoria_id, subcategoria: f.subcategoria, categoria: f.categoria, existencia: +f.existencia,
+        pedido: 0, lineas: 0, tiendas: new Set(), horas_max: 0 });
+      const p = m.get(f.producto_id);
+      p.pedido += +f.cantidad; p.lineas += 1; p.tiendas.add(f.tienda); p.horas_max = Math.max(p.horas_max, +f.horas);
+    });
+    const prods = [...m.values()].map((p) => ({ ...p, faltante: Math.max(0, p.pedido - p.existencia), n_tiendas: p.tiendas.size,
+      lista_tiendas: [...p.tiendas].sort().join(', ') })).sort((a, b) => b.faltante - a.faltante || b.lineas - a.lineas);
+    estado.sinStockProd = prods;
+    $('#ss-prod-tit').textContent = `Por producto · ${n(prods.length)} productos`;
+    tabla('#ss-prod', [
+      { t: 'Producto', k: (f) => `${f.producto_id} · ${f.producto_nombre ?? ''}`, wrap: true },
+      { t: 'ABC', k: 'abc' },
+      { t: 'Subcategoría', k: (f) => `${f.sub_categoria_id} · ${f.subcategoria}` },
+      { t: 'Tiendas', k: (f) => `<span title="${esc(f.lista_tiendas)}">${f.n_tiendas}</span>`, html: true, n: true },
+      { t: 'Líneas', k: (f) => n(f.lineas), n: true },
+      { t: 'Pedido total', k: (f) => n(f.pedido), n: true },
+      { t: 'Existencia CEDIS', k: (f) => n(f.existencia), n: true },
+      { t: 'Faltante', k: (f) => n(f.faltante), n: true, cls: () => 'rojo' },
+      { t: 'Más antigua', k: (f) => Math.floor(f.horas_max) + ' h', n: true },
+    ], prods.slice(0, 300));
+
+    // detalle
+    $('#ss-det-tit').textContent = `Detalle por línea · ${n(F.length)} líneas`;
+    tabla('#ss-det', [
+      { t: 'Horas', k: (f) => Math.floor(+f.horas) + ' h', n: true, cls: (f) => (+f.horas >= 96 ? 'rojo' : '') },
+      { t: 'Tienda', k: 'tienda' },
+      { t: 'Producto', k: (f) => `${f.producto_id} · ${f.producto_nombre ?? ''}`, wrap: true },
+      { t: 'ABC', k: 'abc' },
+      { t: 'Subcategoría', k: (f) => `${f.sub_categoria_id} · ${f.subcategoria}` },
+      { t: 'Cant. requerida', k: (f) => n(f.cantidad), n: true },
+      { t: 'Existencia CEDIS', k: (f) => n(f.existencia), n: true, cls: (f) => (+f.existencia <= 0 ? 'rojo' : '') },
+      { t: 'Creado', k: (f) => fecha(f.fecha_creacion, true) },
+      { t: 'Req.', html: true, k: (f) => `<span title="${esc(f.req_id)}">${esc(String(f.req_id ?? '').slice(0, 8))}…</span>` },
+    ], F.slice(0, 300));
+    if (F.length > 300) $('#ss-det').insertAdjacentHTML('beforeend', `<tr><td colspan="9" class="vacio">Se muestran 300 de ${n(F.length)}. Descarga el CSV para ver todas.</td></tr>`);
+  }
+  function csvGenerico(filas, cols, nombre) {
+    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = '\ufeff' + cols.join(',') + '\n' + filas.map((r) => cols.map((c) => q(r[c])).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = nombre + (estado.tienda ? '_t' + estado.tienda : '') + '.csv';
+    a.click();
+  }
+
+  const VISTAS = { 'ttl': vistaTTL, 'ns-general': vistaNSGeneral, 'ns-sub': vistaNSSub, 'sin-stock': vistaSinStock };
   async function pintar() {
     document.querySelectorAll('.vista').forEach((v) => (v.hidden = v.id !== 'v-' + estado.vista));
     document.querySelectorAll('.menu button').forEach((b) => b.classList.toggle('activo', b.dataset.vista === estado.vista));
@@ -435,7 +525,7 @@
     const params = new URLSearchParams({ v: estado.vista, mes: estado.mes, tienda: estado.tienda });
     history.replaceState(null, '', '#' + params);
     document.querySelectorAll('.aviso-mes').forEach((x) => x.remove());
-    if (estado.vista !== 'ns-general' && estado.mes && estado.mesesDetalle && !estado.mesesDetalle.has(estado.mes)) {
+    if (!['ns-general', 'sin-stock'].includes(estado.vista) && estado.mes && estado.mesesDetalle && !estado.mesesDetalle.has(estado.mes)) {
       const txt = estado.vista === 'ns-sub'
         ? `${nombreMes(estado.mes)} viene del histórico: se muestra el resumen por tienda; los motivos (Reporte NS) solo existen desde que se cargan los archivos diarios.`
         : `No hay detalle por línea de ${nombreMes(estado.mes)}: este menú se llena con los archivos diarios. El histórico de meses anteriores está en Nivel de servicio → General y → Subcategorías.`;
@@ -483,6 +573,12 @@
     $('#f-tienda').onchange = (e) => { estado.tienda = e.target.value; pintar(); };
     document.querySelectorAll('.menu button').forEach((b) => (b.onclick = () => { estado.vista = b.dataset.vista; pintar(); }));
     $('#ttl-pend-csv').onclick = csvPendientes;
+    $('#ss-buscar').oninput = () => pintarSinStock();
+    $('#ss-abc').onchange = $('#ss-exist').onchange = () => pintarSinStock();
+    $('#ss-det-csv').onclick = () => csvGenerico(estado.sinStockFiltrado || [], ['tienda_id', 'tienda', 'req_id', 'id_req_d', 'fecha_creacion', 'horas',
+      'producto_id', 'producto_nombre', 'abc', 'sub_categoria_id', 'subcategoria', 'categoria', 'cantidad', 'existencia', 'ns_motivo', 'gestor'], 'pendientes_sin_stock_detalle');
+    $('#ss-prod-csv').onclick = () => csvGenerico(estado.sinStockProd || [], ['producto_id', 'producto_nombre', 'abc', 'sub_categoria_id', 'subcategoria',
+      'categoria', 'n_tiendas', 'lista_tiendas', 'lineas', 'pedido', 'existencia', 'faltante', 'horas_max'], 'pendientes_sin_stock_por_producto');
     $('#nss-p72-rango').onchange = pintarPendientesNS;
     $('#nss-p72-csv').onclick = () => descargarCSV(filasPend72(), 'pendientes_con_stock_' + $('#nss-p72-rango').value + 'h');
     $('#nss-p96-csv').onclick = () => descargarCSV(filasPend96(), 'pendientes_con_stock_mas_96h');

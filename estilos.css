@@ -182,3 +182,5 @@ table.meses3 td { padding: 5px 7px; }
 @media (max-width: 640px) { .leeme dl { grid-template-columns: 1fr; gap: 2px; } .leeme dd { margin-bottom: 6px; } }
 table.meses3.un-mes { max-width: 900px; }
 .acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.filtros-locales { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding: 12px 18px; }
+.filtros-locales input[type=search] { border: 1px solid var(--borde); border-radius: 6px; padding: 5px 8px; font: inherit; min-width: 260px; max-width: 70vw; }

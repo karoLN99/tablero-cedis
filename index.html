@@ -26,6 +26,9 @@
       <button data-vista="ns-general">General</button>
       <button data-vista="ns-sub">Subcategorías</button>
     </div>
+    <div class="grupo">
+      <button data-vista="sin-stock">Sin stock</button>
+    </div>
   </nav>
 </header>
 
@@ -248,6 +251,62 @@
         <dl>
           <dt>Mes y Tienda</dt><dd>Filtran todo el menú. La dirección de la página guarda los filtros, así que puedes compartir un enlace que ya abra en una tienda o un mes.</dd>
           <dt>Corte</dt><dd>Fecha y hora de la extracción del sistema que se cargó por última vez. El tablero se actualiza una vez al día.</dd>
+        </dl>
+      </details>
+    </article>
+  </section>
+
+  <!-- ======================= SIN STOCK ======================= -->
+  <section id="v-sin-stock" class="vista" hidden>
+    <div class="kpis" id="ss-kpis"></div>
+    <article class="tarjeta filtros-locales">
+      <label class="inline">Buscar <input type="search" id="ss-buscar" placeholder="Producto, código o subcategoría"></label>
+      <label class="inline">ABC <select id="ss-abc"><option value="">Todas</option></select></label>
+      <label class="inline">Existencia <select id="ss-exist">
+        <option value="">Todas</option>
+        <option value="cero">Sin existencia (0)</option>
+        <option value="parcial">Existencia parcial</option>
+      </select></label>
+      <span class="nota" id="ss-nota-filtro"></span>
+    </article>
+    <div class="dos-col">
+      <article class="tarjeta">
+        <h2>Por tienda</h2>
+        <div class="tabla-scroll alto"><table id="ss-tiendas"></table></div>
+      </article>
+      <article class="tarjeta">
+        <h2>Por categoría</h2>
+        <div class="tabla-scroll alto"><table id="ss-cats"></table></div>
+      </article>
+    </div>
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <h2 id="ss-prod-tit">Por producto</h2>
+        <button class="btn-sec" id="ss-prod-csv">Descargar (CSV)</button>
+      </div>
+      <p class="nota">Cuánto piden en total las tiendas de cada producto, cuánto hay hoy en el CEDIS y cuánto falta. Ordenado de mayor a menor faltante. Útil para compras y reabasto.</p>
+      <div class="tabla-scroll alto"><table id="ss-prod"></table></div>
+    </article>
+    <article class="tarjeta">
+      <div class="tarjeta-cab">
+        <h2 id="ss-det-tit">Detalle por línea</h2>
+        <button class="btn-sec" id="ss-det-csv">Descargar (CSV)</button>
+      </div>
+      <p class="nota">Cada línea pendiente sin stock suficiente, de la más antigua a la más reciente.</p>
+      <div class="tabla-scroll alto"><table id="ss-det"></table></div>
+    </article>
+    <article class="tarjeta leeme">
+      <details>
+        <summary>¿Qué muestra cada apartado? · Sin stock</summary>
+        <p>Líneas de requerimiento <b>pendientes</b> (sin entregar) cuyo producto <b>no tiene hoy existencia suficiente en el CEDIS</b> para despacharse: la existencia actual es menor a la cantidad que pidió la tienda (o no hay registro de existencia). Fuente: la última carga de <i>totalidad de requerimientos</i> y <i>existencias del CEDIS</i>.</p>
+        <p>No se incluyen las líneas con más de <b>15 días</b>, porque a ese plazo el requerimiento se anula automáticamente. Este menú no usa el filtro de mes (un pendiente sigue pendiente aunque cambie el mes); sí usa el de tienda.</p>
+        <dl>
+          <dt>Indicadores</dt><dd>Líneas, requerimientos, productos y unidades pendientes sin stock, y cuántas líneas tienen existencia cero en el CEDIS.</dd>
+          <dt>Filtros de esta sección</dt><dd><b>Buscar</b> por nombre o código de producto o subcategoría; <b>ABC</b>; y <b>Existencia</b>: "Sin existencia (0)" o "Existencia parcial" (hay algo, pero no alcanza para lo pedido).</dd>
+          <dt>Por tienda / Por categoría</dt><dd>Cuántas líneas y unidades sin stock tiene cada tienda y cada categoría.</dd>
+          <dt>Por producto</dt><dd>Suma lo que piden todas las tiendas de cada producto y lo compara con la existencia del CEDIS: <b>Faltante</b> = pedido total − existencia. Ordenado de mayor a menor faltante.</dd>
+          <dt>Detalle por línea</dt><dd>Cada línea con sus horas desde la creación, tienda, producto, cantidad pedida, existencia actual y requerimiento.</dd>
+          <dt>Descargas (CSV)</dt><dd>Bajan la tabla completa con los filtros aplicados, para trabajarla en Excel.</dd>
         </dl>
       </details>
     </article>
